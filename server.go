@@ -44,11 +44,10 @@ func handleConnections(conn net.Conn){
 
 func main() {
 	fmt.Println("This is server code")
-	//port_list := []string{"80", "8080", "443"} 
-	//for _, port := range port_list{
-		port :="80"
+	port_list := []string{"80", "8080", "443"} 
+	for _, port := range port_list{
 		fmt.Println("Invoking listener for ", port)
 		go invokeParallelListeners(port)
-	//}
+	}
 	select{}
 }
