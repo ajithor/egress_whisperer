@@ -5,48 +5,74 @@ import (
 	"net"
 	"time"
 	"log"
+	"sync"
 )
+
+// Create a global pool of byte slices to reuse memory across goroutines, in case the project goes to a 65k port option
+var bufPool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, 1024)
+	},
+}
 
 type dialResult struct {
 	port   string
 	status string
 }
 
-func invokeParallelDialups(port string, resultChan chan<- dialResult){
+func invokeParallelDialups(port string, wg *sync.WaitGroup, resultChan chan<- dialResult){
 	
-	conn, err := net.DialTimeout("tcp", "127.0.0.1:"+port, 2*time.Second)
+	defer wg.Done()
+
+	var con_type string
+	if port=="53"||port=="123"{ con_type="udp" } else {con_type ="tcp"}
+	conn, err := net.DialTimeout(con_type, "127.0.0.1:"+port, 2*time.Second)
 	if err!=nil{
 		log.Println(err)
+		//fmt.Println("port "+port+" coming mark 1")
 		resultChan <- dialResult{port: port, status: err.Error()}
 		return
 	}
 	defer conn.Close()
 
+	conn.SetDeadline(time.Now().Add(3 * time.Second))
 	fmt.Fprintf(conn, "Hey, beacon message! on port "+port)
-	buf := make([]byte, 1024)
+	
+	// Borrow a buffer from the pool
+	buf := bufPool.Get().([]byte)
+	// Return to the pool when the function exits
+	defer bufPool.Put(buf)
+
 	n, err := conn.Read(buf)
 	if err!=nil{
 		log.Println(err)
+		//fmt.Println("port "+port+" coming mark 2")
 		resultChan <- dialResult{port: port, status: err.Error()}
+		return
 	}
 	fmt.Println("Recieved foll msg from server -", string(buf[:n]))
+	//fmt.Println("port "+port+" coming mark 3")
 	resultChan <- dialResult{port: port, status: "success"}
 }
 
 func main(){
 	fmt.Println("Client code")
-	port_list := []string{"80", "8080", "443", "9001"} // ,"53", "123"}
+	port_list := []string{"80", "8080", "443", "53", "123"}
+	
 	report := make(map[string]string)
 
 	resultChan := make(chan dialResult, len(port_list))
+	var wg sync.WaitGroup
 
 	for _, port := range port_list{
-		if port=="53"||port=="123"{
-			fmt.Println("Invoking udp dialup for port "+port)
-		}else{
-			go invokeParallelDialups(port, resultChan)
-		}
+		wg.Add(1)
+		go invokeParallelDialups(port, &wg, resultChan)
 	}
+
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
 
 	for i := 0; i < len(port_list); i++ {
 		res := <-resultChan
