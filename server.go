@@ -21,7 +21,7 @@ var bufPool = sync.Pool{
 
 func invokeTcpListener(ctx context.Context, port string){
 
-	listener, err := net.Listen("tcp", "127.0.0.1:"+port) //bind port to listener
+	listener, err := net.Listen("tcp", "10.0.0.1:"+port) //bind port to listener
 	if err!=nil{
 		log.Println(err) //usually when IP is wrong or port is busy
 		return
@@ -51,7 +51,7 @@ func invokeTcpListener(ctx context.Context, port string){
 
 func invokeUdpListener(ctx context.Context, port string){
 
-	conn, err := net.ListenPacket("udp", "127.0.0.1:"+port)
+	conn, err := net.ListenPacket("udp", "10.0.0.1:"+port)
 	if err != nil {
     	log.Println(err)
     	<-ctx.Done()
@@ -101,7 +101,8 @@ func handleConnections(conn net.Conn){
 
 func main() {
 	fmt.Println("This is server code")
-	port_list := []string{"80", "8080", "443", "53", "123"}
+	port_list := []string{"80", "8080", "443", "53", "123", 9001}
+	//firewall port-filtering rules are set to accept the above listed ports, except 9001 - stage 1
 
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup

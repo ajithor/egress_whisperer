@@ -26,7 +26,7 @@ func invokeParallelDialups(port string, wg *sync.WaitGroup, resultChan chan<- di
 
 	var con_type string
 	if port=="53"||port=="123"{ con_type="udp" } else {con_type ="tcp"}
-	conn, err := net.DialTimeout(con_type, "127.0.0.1:"+port, 2*time.Second)
+	conn, err := net.DialTimeout(con_type, "10.0.0.1:"+port, 2*time.Second)
 	if err!=nil{
 		log.Println(err)
 		//fmt.Println("port "+port+" coming mark 1")
@@ -57,7 +57,8 @@ func invokeParallelDialups(port string, wg *sync.WaitGroup, resultChan chan<- di
 
 func main(){
 	fmt.Println("Client code")
-	port_list := []string{"80", "8080", "443", "53", "123"}
+	port_list := []string{"80", "8080", "443", "53", "123", "9001"}
+	//firewall port-filtering rules are set to accept the above listed ports, except 9001 - stage 1
 	
 	report := make(map[string]string)
 
