@@ -9,6 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	"crypto/tls"
+	"flag"
 
 )
 
@@ -19,9 +21,70 @@ var bufPool = sync.Pool{
 	},
 }
 
+const c2_server_ip = "0.0.0.0"
+var echo_to_stdout string
+
+var http_response_string = "HTTP/1.1 200 OK\r\n" +
+	"Date: Wed, 29 Jul 2026 22:30:00 GMT\r\n" +
+	"Server: Apache/2.4.41 (Ubuntu)\r\n" +
+	"Content-Type: text/html; charset=UTF-8\r\n" +
+	"Content-Length: 42\r\n" +
+	"Connection: close\r\n" +
+	"\r\n" +
+	"<html><body><h1>It Works!</h1></body></html>"
+
+func invokeTlsListener(ctx context.Context, port string){
+	cert, err := tls.LoadX509KeyPair("server.crt", "server.key")
+	if err != nil {
+		log.Fatalf("[-] Failed to load TLS certificates: %v\n", err)
+		<-ctx.Done()
+	}
+
+	config := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		MinVersion:   tls.VersionTLS12, // Ensure compliance with modern security baselines
+	}
+
+	//Open the network transport layer port, i.e initiate tsl listener
+	listener, err := tls.Listen("tcp", c2_server_ip+":"+port, config)
+	if err != nil {
+		log.Fatalf("Failed to initialize TLS listener: %v\n", err)
+		<-ctx.Done()
+	}
+	defer listener.Close()
+
+	for {
+		// The tls.Listen handles uConn.Handshake() automatically.
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Printf("Handshake validation failed: %v\n", err)
+			continue
+		}
+		
+		go func(c net.Conn) {
+			defer c.Close()
+			
+			buf := bufPool.Get().([]byte)
+			defer bufPool.Put(buf)
+
+			conn.SetDeadline(time.Now().Add(3 * time.Second)) //set deadlines to aoid tarpits and other io timeouts
+			// decrypted HTTP payload
+			n, err := c.Read(buf)
+			if err!=nil{
+				log.Println(err)
+			}
+			if echo_to_stdout=="on"{
+				fmt.Printf("Inner application payload over TLS port %q\n%s\n", port, string(buf[:n]))
+			}
+			c.Write([]byte(http_response_string))
+			fmt.Println("Log - ",time.Now()," Request recieved and Replied to ", port)
+		}(conn)
+	}
+}
+
 func invokeTcpListener(ctx context.Context, port string){
 
-	listener, err := net.Listen("tcp", "10.0.0.1:"+port) //bind port to listener
+	listener, err := net.Listen("tcp", c2_server_ip+":"+port) //bind port to listener
 	if err!=nil{
 		log.Println(err) //usually when IP is wrong or port is busy
 		return
@@ -44,14 +107,14 @@ func invokeTcpListener(ctx context.Context, port string){
 				continue
 			}
 		}
-		go handleConnections(conn)
+		go handleConnections(conn, port)
 
 	}
 }
 
 func invokeUdpListener(ctx context.Context, port string){
 
-	conn, err := net.ListenPacket("udp", "10.0.0.1:"+port)
+	conn, err := net.ListenPacket("udp", c2_server_ip+":"+port)
 	if err != nil {
     	log.Println(err)
     	<-ctx.Done()
@@ -67,6 +130,7 @@ func invokeUdpListener(ctx context.Context, port string){
 	buf := bufPool.Get().([]byte)
 	// Return to the pool when the function exits
 	defer bufPool.Put(buf)
+	
 	for{
 		n, clientAddr, err := conn.ReadFrom(buf)
 		if err != nil {
@@ -75,13 +139,16 @@ func invokeUdpListener(ctx context.Context, port string){
 			}
         	continue
     	}
-		fmt.Println("buffer", string(buf[:n]))
+    	if echo_to_stdout=="on"{
+			fmt.Println("echo -", string(buf[:n]))
+		}
 		conn.WriteTo([]byte(buf[:n]), clientAddr)
+		fmt.Println("Log - ",time.Now()," Request recieved and Replied to ", port)
 	} 
 
 }
 
-func handleConnections(conn net.Conn){
+func handleConnections(conn net.Conn, port string){
 	defer conn.Close()
 	// Borrow a buffer from the pool
 	buf := bufPool.Get().([]byte)
@@ -94,14 +161,23 @@ func handleConnections(conn net.Conn){
 		log.Println(err)
 	}
 	
-	fmt.Println("buffer", string(buf[:n]))
+	if echo_to_stdout=="on"{
+		fmt.Println("echo - ", string(buf[:n]))
+	}
 	//time.Sleep(10*time.Second) //to test the read timeout on the client
-	fmt.Fprintf(conn, "Echo - "+ string(buf[:n]) )
+	fmt.Fprintf(conn, http_response_string)
+	fmt.Println("Log - ",time.Now()," Request recieved and Replied to ", port)
 }
 
 func main() {
-	fmt.Println("This is server code")
-	port_list := []string{"80", "8080", "443", "53", "123", 9001}
+	fmt.Print("server started")
+
+	debug := flag.String("debug", "off", "toggle debug mode - on or off")    
+    flag.Parse()
+
+    echo_to_stdout = *debug
+    fmt.Println(" with debug", echo_to_stdout)
+	port_list := []string{"80", "8080", "443", "53", "123", "9001", "8443"}
 	//firewall port-filtering rules are set to accept the above listed ports, except 9001 - stage 1
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -111,10 +187,13 @@ func main() {
 		wg.Add(1)
 		go func (p string){
 			defer wg.Done()
-			if p=="53" || p=="123"{
-				go invokeUdpListener(ctx, p)
-			}else{
-				go invokeTcpListener(ctx, p)
+			switch p {
+			 case "80", "8080", "9001":
+			 	go invokeTcpListener(ctx, p)
+			 case "443", "8443":
+			 	go invokeTlsListener(ctx, p)
+			 default:
+			 	go invokeUdpListener(ctx, p)
 			}
 			//if we use "port here instead of p, reference gets passed, so all parallel funtionas may change it"
 		}(port)
