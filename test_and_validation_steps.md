@@ -1,5 +1,5 @@
 This note is for anyone who wants to work on this project further, and want to establish a baseline, and understand which part does what.
-For the people who just want to use the tool for engagements, refer Usage section in [readme.md] 
+For the people who just want to use the tool for engagements, refer Usage section in [[readme.md]] 
 
 Requirements--
 1. pfSense vm, with 2 "Internal Network" network interfaces - internal(lan) and external (wan) (Note - for installation, keep the wan network adapter as "NAT", cuz this needs internet connection. You can change it back to "Internal network" adapter after the installation)

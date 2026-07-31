@@ -2,7 +2,7 @@
 > Find your way out before you commit to a C2 transport.
 
 A lightweight egress diagnostic binary, written in golang. Drop the binary on a compromised host and point it at your listener. Produces a report on which ports and protocols survided the target's firewall (including Deep Packet Inspection). The report can then be used structure the fallback into your implant.
-Tested against pfSense and Suricata [pfSense_suricata_rules.md]
+Tested against pfSense and Suricata [[pfSense_suricata_rules.md]]
 
 # Problem Statement
 You gain Initial access on a hardened internal network. Before you can structure your C2 fallback and establish a channel, you need to know what gets out from the firewall of the network (maybe ACL port blocks, or maybe DPI which kills anything that doesnt look like legitimate browzer traffic). 
@@ -56,7 +56,7 @@ client.exe -target 10.0.0.1 [-stealth 2] [-timeout 3s] [-ports 80, 443, 53]
 #this should give you a report
 #Use the report to structure your C2 implant's fallback
 ```
-If you're a someone who wants to work on this tool, or want to establish a baseline, and understand which part does what, check out the [test_reproduction.md]
+If you're a someone who wants to work on this tool, or want to establish a baseline, and understand which part does what, check out the [[test_reproduction.md]]
 
 ---
 Sample Report output
