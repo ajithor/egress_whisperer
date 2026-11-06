@@ -108,15 +108,15 @@ cd egress_whisperer
 openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -sha256 -days 365 -nodes -subj "/CN=egress-whisperer.local"
 #go get utls
 go get github.com/refraction-networking/utls
-GOOS=linux GOARCH=amd64 go build -o client client.go
-GOOS=linux GOARCH=amd64 go build -o server server.go
+GOOS=linux GOARCH=amd64 go build -o client main_infra/client/client.go
+GOOS=linux GOARCH=amd64 go build -o server main_infra/server/server.go
 
 cd raw_infra;
 openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -sha256 -days 365 -nodes -subj "/CN=egress-whisperer.local"
 #might need to `go get` utls.
 go get github.com/refraction-networking/utls
-GOOS=linux GOARCH=amd64 go build -o server_raw server_raw.go
-GOOS=linux GOARCH=amd64 go build -o client_raw client_raw.go
+GOOS=linux GOARCH=amd64 go build -o server_raw raw_infra/server/server_raw.go
+GOOS=linux GOARCH=amd64 go build -o client_raw raw_infra/client/client_raw.go
 
 #client is the one that evades. clinet_raw only sends messages over raw packets (no HTTP/TLS/DNS/NTP)
 

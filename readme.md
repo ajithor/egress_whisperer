@@ -25,8 +25,8 @@ egress_whisperer solves this, by crafting legitamete-looking requests, with opti
 If you just wanna use the tool --
 Short version
 ```sh
-GOOS=linux GOARCH=amd64 go build -o server server.go
-GOOS=linux GOARCH=amd64 go build -o client client.go
+GOOS=linux GOARCH=amd64 go build -o server main_infra/server/server.go
+GOOS=linux GOARCH=amd64 go build -o client main_infra/client/client.go
 ./server [-debug on/off]
 ./client -target 10.0.0.1 [-stealth 2] [-timeout 3s] [-ports 80, 443, 53]
 ```
@@ -39,12 +39,12 @@ openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -sha256 -d
 go get github.com/refraction-networking/utls
 
 #build the server
-GOOS=linux GOARCH=amd64 go build -o server server.go
+GOOS=linux GOARCH=amd64 go build -o server main_infra/server/server.go
 #cross-compile or build the client, 
 #for liux
-GOOS=linux GOARCH=amd64 go build -o client client.go
+GOOS=linux GOARCH=amd64 go build -o client main_infra/client/client.go
 #for windows
-GOOS=windows GOARCH=amd64 go build -o client.exe client.go
+GOOS=windows GOARCH=amd64 go build -o client.exe main_infra/client/client.go
 #or look up how to build your arch and os
 
 #now, transfer the `client` to the victim machine
