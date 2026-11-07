@@ -153,7 +153,7 @@ func invokeParallelDialups(port string, wg *sync.WaitGroup, resultChan chan<- di
 		//need to implement logic if server was able to send something predictable
 		//fmt.Println("Recieved foll msg from server - from port",port, "\n" ,buf[:n]) //change _ to n on line 144 for output
 		//fmt.Println("port "+port+" coming mark 3")
-		resultChan <- dialResult{port: port, status: "success"}
+		resultChan <- dialResult{port: port, status: "success for 53"}
 		return
 
 	case "123":
@@ -200,7 +200,7 @@ func invokeParallelDialups(port string, wg *sync.WaitGroup, resultChan chan<- di
 		//need to implement logic if server was able to send something predictable
 		//fmt.Println("Recieved foll msg from server - from port",port, "\n" ,buf[:n]) change _ to n on line 191 for output
 		//fmt.Println("port "+port+" coming mark 3")
-		resultChan <- dialResult{port: port, status: "success"}
+		resultChan <- dialResult{port: port, status: "success for 123"}
 		return
 
 	default:
